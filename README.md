@@ -2,7 +2,7 @@
 
 **系统通知**（System notifications）插件：当对话回合结束或 agent 开始等待你时——授权请求、`ask-user` 提问或计划审核——即使页面在后台，浏览器也会弹出 **OS 级通知**，让你不会错过。
 
-这是一个 **DeepSeek Harness 社区插件**（GitHub topic: `dsh-plugin`），以独立仓库发布，独立于官方 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 仓库。
+这是一个 **DeepSeek Harness 社区插件**（GitHub topic: [`dsh-plugin`](https://github.com/topics/dsh-plugin)），以独立仓库发布，独立于官方 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 仓库。
 
 ## 功能
 
@@ -15,6 +15,18 @@
 插件只监听浏览器端会话列表快照的**实时状态变化**，刷新和重连不会重放旧通知。
 
 ## 安装
+
+### 通过 dsh plugin add（推荐）
+
+本插件声明了 `dsh.bundle` manifest，可直接用官方插件安装命令：
+
+```sh
+dsh plugin --profile web add @deepseek-ai/dsh-client-ui-notifications
+```
+
+（npm 发布后生效；当前可从源码仓库安装：`dsh plugin --profile web add pany0593/ui-system-notifications`。）
+
+### 手动加入 cordis.yml
 
 在你的 dsh 配置（如 `cordis.yml`）中加入本插件：
 
