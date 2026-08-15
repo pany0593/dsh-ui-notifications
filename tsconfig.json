@@ -1,33 +1,31 @@
 {
-  "extends": "../../../tsconfig.base.client.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "rootDir": "src",
-    "outDir": "lib/types"
+    "outDir": "lib",
+    "declaration": true,
+    "declarationDir": "lib/types",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true
   },
   "include": [
     "src"
   ],
-  "references": [
-    {
-      "path": "../../../vendor/cordis"
-    },
-    {
-      "path": "../../runtime-diagnostics/invariants"
-    },
-    {
-      "path": "../runtime"
-    },
-    {
-      "path": "../locale"
-    },
-    {
-      "path": "../ui-slots"
-    },
-    {
-      "path": "../ui-settings"
-    },
-    {
-      "path": "../ui-settings-general"
-    }
+  "exclude": [
+    "tests",
+    "lib",
+    "node_modules"
   ]
 }

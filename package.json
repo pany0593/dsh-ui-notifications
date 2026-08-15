@@ -54,8 +54,11 @@
     }
   },
   "scripts": {
-    "bundle": "tsdown",
-    "watch": "tsdown --watch"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json && tsdown",
+    "watch": "tsdown --watch",
+    "test": "vitest run",
+    "test:gui": "vitest run"
   },
   "license": "MIT",
   "peerDependencies": {
@@ -76,11 +79,17 @@
     "@deepseek-ai/dsh-client-ui-settings": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-settings-general": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-invariants": "^0.1.0-rc.6",
+    "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
     "@types/react": "~18.3.1",
     "@deepseek-ai/cordis": "^4.0.1",
+    "jsdom": "^26.0.0",
+    "lightningcss": "^1.32.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.8"
   },
   "files": [
     "lib/index.js",
@@ -88,5 +97,10 @@
     "lib/client.js",
     "cordis.patch.yml",
     "lib/types/**/*.d.ts"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

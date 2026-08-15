@@ -1,3 +1,108 @@
-import { clientBundle } from '../tsdown.client.ts'
+/**
+ * Browser client bundle for the dsh-system-notifications plugin, mirroring the
+ * DeepSeek Harness client preset (packages/client/tsdown.client.ts) for an
+ * external package: a closure-factory artifact that calls
+ * window.__ModuleLoader__.load({ id, factory }) and resolves externals through
+ * the injected require (loader module table). CSS Modules compile via
+ * lightningcss inside the bundle: importing `x.module.css` yields the hashed
+ * class map, and the css text auto-injects a <style data-plugin> tag at
+ * factory execution (the loader removes plugin-owned tags on unload).
+ *
+ * The node half (src/index.ts, src/invariant.ts) ships from `lib/types` via
+ * tsc; only the browser half is bundled here.
+ */
+import { readFile } from 'node:fs/promises'
+import { basename, dirname, resolve as resolvePath } from 'node:path'
+import { defineConfig } from 'tsdown'
+import { transform } from 'lightningcss'
 
-export default clientBundle('@deepseek-ai/dsh-client-ui-notifications', ['lib/types/index.js', 'lib/types/invariant.js'])
+const id = '@deepseek-ai/dsh-client-ui-notifications'
+
+/**
+ * Externals resolved from the loader module table at runtime. This plugin's
+ * value imports are only react (useState); every @deepseek-ai/* import is
+ * type-only and erased at compile time.
+ */
+const CLIENT_EXTERNALS = ['react', 'react/jsx-runtime']
+
+/**
+ * Virtual-id wrapper keeping module CSS away from tsdown's own css pipeline
+ * (which requires @tsdown/css). The suffix matters: tsdown's guard matches
+ * ids ending in `.css`, so the virtual id must not.
+ */
+const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
+const CSS_VIRTUAL_SUFFIX = '.mjs'
+
+export default defineConfig({
+  entry: { client: 'src/client/index.ts' },
+  // The published artifact location: package.json exports "./client" points
+  // at lib/client.js, so the bundle lands there directly. clean must stay off —
+  // tsc owns lib/types and a clean pass would wipe it.
+  outDir: 'lib',
+  format: 'cjs',
+  platform: 'browser',
+  target: 'es2022',
+  // Host types ship from lib/types (tsc); dts here would wrap the
+  // banner/footer into .d.cts and break parsing.
+  dts: false,
+  // Plugin code is fetched outside the host's module graph, so its own bundle
+  // carries the TS/TSX mapping consumed by browser profiling tools.
+  sourcemap: true,
+  clean: false,
+  external: [...CLIENT_EXTERNALS],
+  // tsdown auto-externalizes package dependencies; anything NOT in the loader
+  // module table must inline instead — a require() the table cannot answer is
+  // a guaranteed runtime throw.
+  noExternal: (source: string) => (CLIENT_EXTERNALS.includes(source) ? undefined : true),
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    'import.meta.env.MODE': JSON.stringify('production'),
+    'import.meta.env': JSON.stringify({ MODE: 'production' }),
+  },
+  plugins: [{
+    name: 'dsh-css-modules-inline',
+    resolveId(source: string, importer: string | undefined) {
+      if (!source.endsWith('.module.css')) return null
+      const abs = importer !== undefined ? resolvePath(dirname(importer), source) : source
+      return CSS_VIRTUAL_PREFIX + abs + CSS_VIRTUAL_SUFFIX
+    },
+    async load(this: { addWatchFile(file: string): void }, virtualId: string) {
+      if (!virtualId.startsWith(CSS_VIRTUAL_PREFIX)) return null
+      const fileId = virtualId.slice(CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+      // The virtual id otherwise hides the physical stylesheet from Rolldown's watch graph.
+      this.addWatchFile(fileId)
+      const source = await readFile(fileId)
+      const { code, exports: cssExports } = transform({
+        filename: fileId,
+        code: source,
+        cssModules: { pattern: '[hash]_[local]' },
+        minify: true,
+        // Without targets, lightningcss collapses the hand-written
+        // `backdrop-filter` + `-webkit-backdrop-filter` pair to the -webkit-
+        // form only, losing Firefox. Targets (major << 16) keep both.
+        targets: { chrome: 90 << 16, firefox: 100 << 16, safari: 13 << 16, edge: 90 << 16 },
+      })
+      const classMap: Record<string, string> = {}
+      for (const [local, exp] of Object.entries(cssExports ?? {})) classMap[local] = exp.name
+      // One <style data-plugin> per module file; idempotent under re-evaluation.
+      return [
+        `const css = ${JSON.stringify(code.toString())};`,
+        `const tagId = ${JSON.stringify(`${id}/${basename(fileId)}`)};`,
+        'if (typeof document !== \'undefined\' && document.querySelector(\'style[data-plugin-css=\' + JSON.stringify(tagId) + \']\') === null) {',
+        '  const tag = document.createElement(\'style\');',
+        `  tag.dataset.plugin = ${JSON.stringify(id)};`,
+        '  tag.dataset.pluginCss = tagId;',
+        '  tag.textContent = css;',
+        '  document.head.appendChild(tag);',
+        '}',
+        `export default ${JSON.stringify(classMap)};`,
+      ].join('\n')
+    },
+  }],
+  outputOptions: {
+    entryFileNames: 'client.js',
+    banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(id)}, factory: (require) => {`,
+    footer: 'return module.exports; } });',
+    intro: 'var module = { exports: {} }; var exports = module.exports;',
+  },
+})

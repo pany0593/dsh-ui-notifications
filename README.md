@@ -56,6 +56,7 @@ pnpm run test:gui                                               # 客户端测�
 - **仅浏览器 Web Notifications** — 原生桌面客户端需要自己的通知通道；本插件不超出网页范围。
 - **单通道设计** — 尚无按类型（回合结束 vs 授权）的细分开关，行内只有一个总开关，后续可扩展。
 - **权限由浏览器管理** — 若用户在浏览器中拒绝权限，插件无法再次弹请求；设置行会引导到浏览器设置。
+- **独立仓库测试范围** — 本仓库只带纯逻辑测试（`tests/notifications.spec.ts`）；UI 组件级测试依赖官方 monorepo 的测试基建（源码解析与 `__ModuleLoader__` 注入），随官方仓库的 `packages/client/ui-notifications` 运行。
 
 ## 许可
 
